@@ -2,240 +2,1251 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Error 米 mii</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Error 米 mii — Art Collective</title>
+<meta name="description" content="Error 米 mii is an art collective founded in 2025 by Anikó Mazán and Rokko Juhász.">
+<meta name="theme-color" content="#e00000">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="style.css">
 <style>
-html,body{
-  margin:0;
-  height:100%;
-  overflow:hidden;
-  background:red;
-  font-family: Myriad, Arial, sans-serif;
+:root{
+  --red:#e00000; --ink:#0d0d0d; --paper:#f4f4f2; --muted:#9a9a96; --line:rgba(255,255,255,.14);
+  --bg:#111; --bg-alt:#181818; --max:1140px; --head:118px; --logo:100px;
+  --font:"Space Grotesk","Myriad Pro",Arial,sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:calc(var(--head) - 10px)}
+body{margin:0;background:var(--bg);color:var(--paper);font:400 1rem/1.65 var(--font)}
+img{max-width:100%;height:auto;display:block}
+a{color:inherit}
+:focus-visible{outline:2px solid #fff;outline-offset:3px}
+.container{width:min(var(--max),100% - 2.5rem);margin-inline:auto}
+.muted{color:var(--muted)}
+
+/* ---------- HEADER (floats over the hero) ---------- */
+.site-header{position:fixed;inset:0 0 auto 0;z-index:50;height:var(--head);transition:background .3s}
+.site-header.solid,.site-header.menu-open{background:rgba(13,13,13,.94);backdrop-filter:blur(8px)}
+.header-inner{height:100%;display:flex;align-items:center;gap:1.75rem;padding:0 clamp(1rem,3vw,2.5rem)}
+.brand{font-size:clamp(1.3rem,3vw,1.9rem);font-weight:700;text-decoration:none;letter-spacing:-.02em;white-space:nowrap}
+.brand b{font-weight:500;margin:0 .1em}
+.nav-links{margin-left:auto;display:flex;gap:2rem}
+.nav-links a{text-decoration:none;font-weight:500;font-size:1.05rem;padding:.25rem 0;border-bottom:2px solid transparent}
+.nav-links a:hover{border-color:#fff}
+.logo{display:block;flex:none;line-height:0}
+.logo img{height:var(--logo);width:auto}
+.nav-toggle{display:none;background:none;border:0;width:44px;height:44px;cursor:pointer;margin-left:auto;position:relative}
+.nav-toggle span{position:absolute;left:10px;right:10px;height:2px;background:#fff;transition:transform .2s}
+.nav-toggle span:first-child{top:17px}.nav-toggle span:last-child{top:25px}
+.nav-toggle[aria-expanded="true"] span:first-child{transform:translateY(4px) rotate(45deg)}
+.nav-toggle[aria-expanded="true"] span:last-child{transform:translateY(-4px) rotate(-45deg)}
+
+/* ---------- HERO: full-screen rice field ---------- */
+.hero{position:relative;height:100vh;height:100svh;min-height:420px;background:var(--red);overflow:hidden}
+#riceCanvas{position:absolute;inset:0;width:100%;height:100%;z-index:1}
+.hero-title{position:absolute;inset:0;z-index:41;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 1rem;pointer-events:none}
+.hero-title>*{pointer-events:auto}
+.hero-title h1{margin:0;font-size:clamp(3rem,13vw,12rem);line-height:1;letter-spacing:-.04em;white-space:nowrap;color:rgba(0,0,0,.14)}
+.hero-subtitle{display:grid;grid-template-areas:"subtitle";max-width:calc(100vw - 2rem);margin:1rem 0 0;padding:.25rem .5rem;border:0;background:transparent;color:#fff;
+  font:500 clamp(1rem,2vw,1.3rem)/1.5 var(--font);text-align:center;text-decoration:none;cursor:pointer}
+.hero-subtitle-label,.hero-subtitle-creators{grid-area:subtitle;transition:opacity .24s ease,transform .24s ease}
+.hero-subtitle-creators{opacity:0;transform:translateY(.25em)}
+.hero-subtitle:focus-visible .hero-subtitle-label{opacity:0;transform:translateY(-.25em)}
+.hero-subtitle:focus-visible .hero-subtitle-creators{opacity:1;transform:translateY(0)}
+@media (hover:hover) and (pointer:fine){
+  .hero-subtitle:hover .hero-subtitle-label{opacity:0;transform:translateY(-.25em)}
+  .hero-subtitle:hover .hero-subtitle-creators{opacity:1;transform:translateY(0)}
+}
+.scroll-cue{position:absolute;z-index:2;left:50%;bottom:1.75rem;width:48px;height:48px;margin-left:-24px;display:grid;place-items:center}
+.scroll-cue::before{content:"";width:16px;height:16px;border-right:3px solid #fff;border-bottom:3px solid #fff;transform:rotate(45deg) translate(-3px,-3px)}
+.rice-drift-layer{position:fixed;inset:0;z-index:40;overflow:hidden;pointer-events:none}
+.rice-grain{position:absolute;left:0;top:0;width:48px;height:48px;padding:0;border:0;appearance:none;background:transparent;
+  transform:translate(-50%,-50%);pointer-events:auto;touch-action:none;cursor:grab;user-select:none}
+.rice-grain:active,.rice-grain.is-dragging{cursor:grabbing}
+.rice-grain::before{content:"";position:absolute;left:50%;top:50%;width:clamp(2.2rem,4vw,3.2rem);height:clamp(.7rem,1.3vw,1rem);
+  clip-path:polygon(0 50%,7% 26%,26% 6%,66% 0,93% 24%,100% 50%,93% 76%,66% 100%,26% 94%,7% 74%);
+  transform:translate(-50%,-50%)}
+.rice-grain.white::before{background:#fff;filter:drop-shadow(0 1px 4px rgba(0,0,0,.65))}
+.rice-grain.black::before{background:#000;filter:drop-shadow(0 0 2px rgba(255,255,255,.85))}
+.rice-grain::after{content:"";position:absolute;left:50%;top:50%;width:clamp(1.2rem,2.2vw,1.8rem);height:1px;background:var(--grain-seam);
+  transform:translate(-50%,-50%) rotate(-3deg)}
+.rice-grain.white{--grain-seam:rgba(0,0,0,.22)}
+.rice-grain.black{--grain-seam:rgba(255,255,255,.32)}
+
+/* ---------- SECTIONS ---------- */
+.section{padding:clamp(3.5rem,8vw,6.5rem) 0}
+.section-alt{background:var(--bg-alt)}
+h2{font-size:clamp(2rem,5vw,3.25rem);line-height:1.1;margin:0 0 2.5rem;letter-spacing:-.025em}
+h3{margin:0 0 .5rem;font-size:1.35rem;line-height:1.25}
+.lead{font-size:clamp(1.2rem,2.4vw,1.6rem);line-height:1.45;margin:0 0 1.25rem;max-width:34ch}
+.accent{color:var(--red)}
+.principles-title{margin:0 0 1.75rem;font-size:clamp(1.35rem,2.5vw,1.8rem);letter-spacing:-.02em}
+.principles-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border:1px solid var(--line)}
+.principle{display:grid;grid-template-columns:5rem minmax(0,1fr);gap:1rem;align-items:start;padding:1.5rem;background:var(--bg);border-bottom:1px solid var(--line)}
+.principle:nth-child(odd){border-right:1px solid var(--line)}
+.principle:nth-child(n+5){border-bottom:0}
+.principle-sign{color:var(--red);font-size:clamp(1.15rem,2vw,1.5rem);font-weight:500;line-height:1.35;white-space:nowrap;font-variant-ligatures:none}
+.principle h4{margin:0 0 .65rem;font-size:1.1rem;line-height:1.35}
+.principle p{margin:0;color:#d8d8d4;line-height:1.65}
+.artist-bio{margin-top:3rem;padding-top:2rem;border-top:1px solid var(--line)}
+.artist-bio h3{margin:0 0 1rem;font-size:clamp(1.35rem,2.5vw,1.8rem)}
+.artist-bio-intro{max-width:75ch;color:#d8d8d4;line-height:1.7}
+.artist-bio-photo{display:block;width:100%;height:clamp(18rem,36vw,30rem);margin:1.75rem 0 0;border:1px solid var(--line);object-fit:cover;object-position:center 60%}
+.artist-bios{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2rem;margin-top:1.75rem}
+.artist-bios>article{min-width:0}
+.artist-bio h4{margin:0 0 .75rem;font-size:1.1rem}
+.artist-bios p{margin:0;color:#d8d8d4;line-height:1.7}
+.artist-bios em{color:var(--paper)}
+
+/* ---------- WORKS ---------- */
+.filters{display:flex;flex-wrap:wrap;gap:.6rem;margin-bottom:2.5rem}
+.filter-btn{font:500 .95rem var(--font);color:var(--paper);background:none;border:1px solid var(--line);
+  padding:.55rem 1.3rem;border-radius:999px;cursor:pointer;transition:background .2s,border-color .2s}
+.filter-btn:hover{border-color:#fff}
+.filter-btn.is-active{background:var(--red);border-color:var(--red)}
+.work-group{margin-bottom:4.5rem}
+.work-group:last-child{margin-bottom:0}
+.work-group[hidden]{display:none}
+.group-title{font-size:clamp(1.6rem,3.5vw,2.25rem);margin:0 0 1.75rem;padding-bottom:.75rem;border-bottom:1px solid var(--line);letter-spacing:-.02em}
+.works-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:1.75rem}
+.projects-after-atlas{margin-top:3.5rem;padding-top:2.5rem;border-top:1px solid var(--line)}
+.workshop-gallery{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.workshop-title{margin:0;font-size:1.35rem}
+.workshop-principles{margin:0 0 2.5rem}
+.workshop-principles-heading{margin:0 0 1.25rem;font-size:clamp(1.35rem,2.5vw,1.8rem);letter-spacing:-.02em}
+.workshop-principles-grid{display:grid;grid-template-columns:minmax(0,1fr);border:1px solid var(--line);border-bottom:0}
+.workshop-principle{min-width:0;padding-block:clamp(1rem,2.5vw,1.5rem);padding-inline:clamp(1rem,2.5vw,1.5rem);border-bottom:1px solid var(--line);background:var(--bg)}
+.workshop-principle-title{display:flex;gap:.75rem;align-items:baseline;margin:0;font-size:1.1rem;font-weight:700;line-height:1.4}
+.workshop-principle-number{flex:none;color:var(--red);font-variant-numeric:tabular-nums}
+.work-card{background:var(--bg-alt);border:1px solid var(--line);display:flex;flex-direction:column}
+.work-card.wide.workshop-trencin-card{grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch}
+.workshop-trencin-card>.workshop-title{grid-column:1 / -1;padding:clamp(1rem,2.5vw,1.5rem) clamp(1rem,2.5vw,1.5rem) 0}
+.workshop-trencin-video{min-width:0;min-height:38rem;display:flex;flex-direction:column;align-items:center;padding:clamp(1rem,2.5vw,1.5rem);background:var(--bg)}
+.workshop-instagram{position:relative;flex:1;width:min(100%,540px);min-width:0;margin-inline:auto;overflow:hidden}
+.workshop-instagram .instagram-media{width:100%!important;min-width:0!important;max-width:540px!important;margin:0 auto!important}
+.workshop-instagram iframe{width:100%!important;min-width:0!important;max-width:100%!important}
+.workshop-instagram-link{display:inline-block;margin:.75rem 0;color:var(--paper);text-decoration-color:var(--red);text-underline-offset:3px}
+.workshop-instagram-link:hover{color:var(--red)}
+.workshop-trencin-gallery{position:relative;min-width:0;min-height:0;overflow:hidden;background:var(--bg-alt);border:1px solid var(--line);cursor:pointer;transition:border-color .2s}
+.workshop-trencin-gallery:hover,.workshop-trencin-gallery:focus-visible{border-color:var(--red)}
+.workshop-trencin-gallery .work-thumb{position:absolute;inset:0;width:100%;height:100%;min-height:0;aspect-ratio:auto}
+.workshop-trencin-gallery .work-body{position:absolute;inset:auto 0 0;padding:1rem;background:linear-gradient(transparent,rgba(13,13,13,.9));}
+.work-card.wide{grid-column:1 / -1;display:grid;grid-template-columns:1fr 1.1fr}
+.work-thumb{aspect-ratio:4/3;background:#000;overflow:hidden;display:grid;place-items:center}
+.work-thumb img{width:100%;height:100%;object-fit:cover}
+.work-card.wide .work-thumb{aspect-ratio:auto;min-height:340px}
+.give-take-card .work-thumb{height:auto;min-height:0;align-self:stretch;background:var(--bg)}
+.give-take-card .work-thumb img{display:block;width:100%;height:100%;object-fit:cover;object-position:68% 50%;transform:none}
+.work-body{padding:1.5rem;display:flex;flex-direction:column;gap:.5rem}
+.work-tag{align-self:start;font-size:.8rem;color:var(--red);border:1px solid var(--red);border-radius:999px;padding:.1rem .7rem}
+.work-meta{margin:0;color:var(--muted);font-size:.9rem}
+.work-body p{margin:0;color:#d8d8d4;font-size:.97rem}
+.give-take-essay{display:grid;gap:1rem;margin-top:.5rem}
+.give-take-essay-intro{color:var(--muted)!important;font-size:.9rem!important}
+.give-take-slide{display:grid;gap:.75rem}
+.give-take-slide[hidden]{display:none}
+.give-take-slide:not([hidden]){animation:give-take-slide-in .24s ease both}
+.give-take-slide h4{margin:0;font-size:1.15rem;line-height:1.35}
+.give-take-slide p{line-height:1.7}
+.give-take-pagination{display:flex;align-items:center;justify-content:space-between;margin-top:.25rem}
+.give-take-essay-source{margin-top:.25rem;padding-top:.7rem;border-top:1px solid rgba(255,255,255,.12);text-align:right;color:var(--muted);font-size:.75rem}
+.give-take-essay-source a{color:inherit;text-decoration:underline;text-decoration-color:rgba(255,255,255,.35);text-underline-offset:.2em;transition:color .2s,text-decoration-color .2s}
+.give-take-essay-source a:hover,.give-take-essay-source a:focus-visible{color:#fff;text-decoration-color:currentColor}
+.give-take-pagination button{display:grid;place-items:center;width:44px;height:44px;padding:0;border:0;background:transparent;color:var(--red);font:400 1.75rem/1 var(--font);cursor:pointer;transition:color .2s,transform .2s}
+.give-take-pagination button:hover:not(:disabled){color:#fff;transform:translateX(2px)}
+.give-take-pagination button:first-child:hover:not(:disabled){transform:translateX(-2px)}
+.give-take-pagination button:disabled{opacity:.3;cursor:default}
+.give-take-pagination button:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+.give-take-pagination-count{color:var(--muted);font-size:.8rem;font-variant-numeric:tabular-nums;letter-spacing:.08em}
+@keyframes give-take-slide-in{from{opacity:0;transform:translateX(.5rem)}to{opacity:1;transform:translateX(0)}}
+@media (prefers-reduced-motion:reduce){.give-take-slide:not([hidden]){animation:none}}
+.work-follow{margin-top:.5rem!important;padding-top:.75rem;border-top:1px solid var(--line)}
+.work-follow strong{color:#fff}
+.work-follow a{text-decoration:underline;text-decoration-color:var(--red);text-decoration-thickness:2px;text-underline-offset:4px}
+.work-follow a:hover strong{color:var(--red)}
+.form-links{display:flex;flex-wrap:wrap;gap:.65rem;margin-top:.5rem}
+.form-link{display:inline-flex;align-items:center;justify-content:center;min-width:3.5rem;min-height:44px;padding:.65rem 1rem;border:1px solid var(--red);background:var(--red);color:#fff;font-weight:700;text-decoration:none;transition:background .2s,border-color .2s}
+.form-link:hover{background:#b00;border-color:#fff}
+.form-prompt{color:var(--paper)!important;font-weight:500}
+.work-year{margin-top:auto;padding-top:.5rem;color:var(--muted);font-size:.85rem}
+.note-trigger{padding:0;border:0;border-bottom:1px dotted currentColor;background:none;color:inherit;font:inherit;cursor:pointer}
+.note-trigger:hover{color:#fff;border-bottom-style:solid}
+.note-trigger:focus-visible{outline:2px solid #fff;outline-offset:3px}
+
+/* Not Your Tree (inside Projects) */
+.nyt{margin-top:2.5rem;display:grid;grid-template-columns:1fr;gap:1.5rem;align-items:start;padding-top:2.5rem;border-top:1px solid var(--line)}
+.nyt h3{font-size:1.75rem}
+.nyt-intro{width:100%;padding-inline:clamp(0rem,1.5vw,1rem)}
+.nyt-intro p{color:#d8d8d4;max-width:100%;line-height:1.65}
+.nyt-atlas{display:grid;grid-template-columns:minmax(0,1fr);gap:0}
+.nyt-stats{list-style:none;display:flex;gap:2.5rem;padding:0;margin:1.5rem 0 0}
+.nyt-stats strong{display:block;font-size:2rem;line-height:1.1}
+.nyt-stats span{color:var(--muted);font-size:.9rem}
+.map-wrap{position:relative;width:100%;min-width:0;min-height:450px}
+.nyt>*{min-width:0}
+#map{width:100%;height:450px;min-height:400px;background:#e6e6e6;border:1px solid var(--line);cursor:pointer}
+.leaflet-container{width:100%;font-family:var(--font);background:#e9e8e4}
+.tiles-paper{filter:grayscale(100%) contrast(85%) brightness(110%)}
+.map-loading{display:grid;place-items:center;height:100%;color:#555}
+.map-expand{position:absolute;right:.75rem;bottom:2rem;z-index:1000;font:500 .9rem var(--font);color:#fff;background:rgba(13,13,13,.88);
+  border:1px solid var(--line);border-radius:999px;padding:.45rem 1rem;cursor:pointer}
+.map-expand:hover{background:var(--red);border-color:var(--red)}
+.map-modal{width:100vw;height:100vh;height:100dvh;max-width:none;max-height:none;margin:0;padding:0;border:0;background:#e6e6e6;overflow:hidden}
+.map-modal::backdrop{background:#000}
+#mapBig{position:absolute;inset:0;width:100%;height:100%;cursor:grab}
+.map-modal .map-close{position:fixed;top:max(1rem,env(safe-area-inset-top));left:max(1rem,env(safe-area-inset-left));right:auto;z-index:2000;display:inline-flex;align-items:center;justify-content:center;
+  width:auto;height:48px;min-width:88px;padding:.5rem 1rem;border:1px solid #fff;border-radius:4px;background:var(--red);color:#fff;
+  box-shadow:0 2px 12px rgba(0,0,0,.65);font:700 1rem var(--font);line-height:1}
+.map-modal .map-close:hover{background:#b00;border-color:#fff}
+.map-reset{position:absolute;right:1rem;bottom:4rem;z-index:1200;font:500 .9rem var(--font);color:#fff;background:rgba(13,13,13,.9);
+  border:1px solid var(--line);border-radius:999px;padding:.5rem 1.1rem;cursor:pointer}
+.map-reset:hover{background:var(--red);border-color:var(--red)}
+.info-modal{width:min(728px,94vw);max-height:98vh;padding:0;border:1px solid var(--line);background:var(--bg-alt);color:var(--paper);overflow:auto}
+.info-modal.has-image{width:min(1982px,98vw)}
+.info-modal::backdrop{background:rgba(0,0,0,.75)}
+.info-modal img{width:100%;height:auto;max-height:min(106.4vh,84vh);object-fit:contain;object-position:center;display:block;background:#000}
+.info-modal img[hidden]{display:none}
+.info-body{padding:1.25rem 1.5rem 1.5rem}
+.info-body h4{margin:0 0 .25rem;font-size:1.25rem;padding-right:2.5rem}
+.info-body p{margin:0;font-size:1.1rem;color:#d8d8d4}
+.note-modal{position:fixed;inset:0;margin:auto;width:min(42rem,calc(100vw - 2rem));max-height:min(82dvh,48rem);padding:clamp(1.25rem,4vw,2rem);
+  border:1px solid var(--line);background:var(--bg-alt);color:var(--paper);overflow:auto}
+.note-modal::backdrop{background:rgba(0,0,0,.78)}
+.note-modal h2{margin:0 3rem 1.25rem 0;font-size:clamp(1.4rem,4vw,1.8rem)}
+.note-modal p{margin:0 0 1rem;color:#d8d8d4;line-height:1.7}
+.note-modal p:last-child{margin-bottom:0}
+.note-modal .modal-close{position:absolute;top:.75rem;right:.75rem}
+.dot-icon{background:none;border:0}
+.dot{display:block;width:22px;height:22px;margin:3px;border-radius:50%;background:var(--red);border:3px solid #fff;
+  box-shadow:0 0 0 0 rgba(224,0,0,.55),0 2px 6px rgba(0,0,0,.45);animation:pulse 2s infinite}
+@keyframes pulse{70%{box-shadow:0 0 0 14px rgba(224,0,0,0),0 2px 6px rgba(0,0,0,.45)}100%{box-shadow:0 0 0 0 rgba(224,0,0,0),0 2px 6px rgba(0,0,0,.45)}}
+@media (prefers-reduced-motion:reduce){.dot{animation:none}}
+.map-notice{position:absolute;left:.75rem;right:.75rem;top:.75rem;z-index:1000;background:#fff;color:#111;border:2px solid var(--red);padding:.75rem 1rem;font-size:.9rem;pointer-events:none}
+.map-fallback{display:grid;align-content:center;gap:1rem;padding:2rem;cursor:default}
+.fallback-msg{margin:0;color:#333;font-size:.95rem}
+.fallback-row{display:flex;gap:.75rem;align-items:stretch}
+.fallback-row .fallback-dot{flex:1}
+.fallback-row a{display:grid;place-items:center;padding:0 1rem;background:var(--red);color:#fff;text-decoration:none;font-weight:500;white-space:nowrap}
+.fallback-dot{display:flex;align-items:center;gap:.75rem;font:500 1.05rem var(--font);color:#111;background:#fff;border:1px solid #ccc;padding:.85rem 1rem;cursor:pointer;text-align:left}
+.fallback-dot i{flex:none;width:14px;height:14px;border-radius:50%;background:var(--red)}
+
+/* Atlas card + lightbox */
+.is-clickable{cursor:pointer;transition:border-color .2s}
+.is-clickable:hover,.is-clickable:focus-visible{border-color:var(--red)}
+.open-hint{margin-top:auto;align-self:start;font-size:.85rem;border-bottom:1px solid var(--red)}
+.modal{width:min(1982px,98vw);max-height:98vh;padding:0;border:1px solid var(--line);background:var(--bg-alt);color:var(--paper);overflow:hidden}
+.modal::backdrop{background:rgba(0,0,0,.88)}
+.modal-grid{height:min(941px,96vh);overflow:hidden}
+.modal-grid.has-description{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)}
+.modal-media{position:relative;height:100%;background:#000;min-height:0}
+.modal-media>img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:center}
+.modal-body{height:100%;min-width:0;padding:2.25rem 2rem;overflow:auto}
+.modal-body[hidden]{display:none}
+.modal-year{display:flex;flex-wrap:wrap;align-items:baseline;gap:.25rem .75rem}
+.modal-year span{color:var(--muted)}
+.modal-year strong{font-size:2.75rem;line-height:1;color:var(--red)}
+.work-year+.open-hint{margin-top:.25rem}
+.gal{position:absolute;inset:0;pointer-events:none}
+.gal[hidden]{display:none}
+.gal>*{pointer-events:auto}
+.gal-nav{position:absolute;top:calc(50% - 36px);transform:translateY(-50%);width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:rgba(13,13,13,.8);color:#fff;font-size:1.8rem;line-height:1;cursor:pointer}
+.gal-nav.prev{left:.75rem}.gal-nav.next{right:.75rem}
+.gal-nav:hover{background:var(--red);border-color:var(--red)}
+.gal-count{position:absolute;left:.75rem;top:.75rem;background:rgba(13,13,13,.8);padding:.15rem .75rem;border-radius:999px;font-size:.85rem}
+.gal-thumbs{position:absolute;left:0;right:0;bottom:0;height:72px;display:flex;gap:6px;padding:6px;background:#000;overflow-x:auto}
+.gal-thumb{flex:none;height:100%;aspect-ratio:1;padding:0;border:2px solid transparent;background:none;cursor:pointer;opacity:.55}
+.gal-thumb.on{border-color:var(--red);opacity:1}
+.gal-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.modal-media.has-gallery>img{height:calc(100% - 72px)}
+.modal-close{position:absolute;top:.6rem;right:.6rem;z-index:2;width:42px;height:42px;border-radius:50%;border:1px solid var(--line);
+  background:rgba(13,13,13,.85);color:#fff;font-size:1.6rem;line-height:1;cursor:pointer}
+.modal-close:hover{background:var(--red);border-color:var(--red)}
+
+/* ---------- CONTACT / FOOTER ---------- */
+.contact-box{display:grid;gap:1rem;max-width:640px}
+.contact-box p{margin:0 0 .5rem;color:#d8d8d4}
+.contact-link{display:grid;grid-template-columns:6rem 1fr auto;gap:1rem;padding:1.1rem 1.25rem;border:1px solid var(--line);
+  text-decoration:none;transition:background .2s,border-color .2s}
+.contact-link:hover{background:var(--red);border-color:var(--red)}
+.contact-label{color:var(--muted)}.contact-link:hover .contact-label{color:#fff}
+.footer{padding:2rem 0;border-top:1px solid var(--line);color:var(--muted);font-size:.9rem}
+.footer-inner{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.5rem 2rem}
+
+/* ---------- RESPONSIVE ---------- */
+@media (max-width:900px){
+  :root{--head:92px;--logo:72px}
+  .principles-grid{grid-template-columns:1fr}
+  .principle,.principle:nth-child(odd){border-right:0;border-bottom:1px solid var(--line)}
+  .principle:last-child{border-bottom:0}
+  .nyt,.work-card.wide{grid-template-columns:1fr}
+  .work-card.wide.workshop-trencin-card{grid-template-columns:minmax(0,1fr)}
+  .workshop-trencin-video,.workshop-trencin-gallery{min-height:26rem}
+  .modal-grid{height:min(941px,96vh)}
+  .modal-grid.has-description{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,.8fr) minmax(0,1fr)}
+  .modal-body{padding:1.5rem 1.25rem}
+  .work-card.wide .work-thumb{min-height:0;aspect-ratio:4/3}
+  .nav-toggle{display:block;width:48px;height:48px}
+  .lang-btn{min-width:48px;min-height:48px}
+  .filter-btn,.form-link,.map-expand,.map-reset,.fallback-row a,.fallback-dot{min-height:48px}
+  .modal-close,.gal-nav{width:48px;height:48px;min-width:48px;min-height:48px}
+  .map-modal .leaflet-control-zoom a{width:48px;height:48px;line-height:46px}
+  .map-modal .leaflet-control-layers-toggle{width:48px;height:48px;background-size:26px 26px}
+  .nav-links{position:absolute;top:var(--head);left:0;right:0;flex-direction:column;gap:0;margin:0;
+    background:rgba(13,13,13,.97);padding:.5rem 1.25rem 1rem;display:none}
+  .nav-links.open{display:flex}
+  .nav-links a{padding:.9rem 0;border-bottom:1px solid var(--line);font-size:1.15rem}
+}
+@media (max-width:480px){
+  :root{--head:80px;--logo:60px}
+  .contact-link{grid-template-columns:1fr auto}.contact-label{grid-column:1/-1}
 }
 
-#title{
-  position:fixed;
-  inset:0;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:17vw;
-  color:rgba(0,0,0,0.11);
-  pointer-events:none;
+@media (max-width:767px){
+  html{scroll-padding-top:calc(var(--head) + 1rem)}
+  .container{width:min(var(--max),100% - 2rem)}
+  .header-inner{display:grid;grid-template-columns:minmax(0,1fr) auto 48px;gap:.125rem;padding-inline:max(.5rem,env(safe-area-inset-left)) max(.5rem,env(safe-area-inset-right))}
+  .brand{min-width:0;font-size:clamp(1rem,5vw,1.45rem)}
+  .logo{display:none}
+  .lang-switcher{justify-self:end;margin:0;gap:0;padding:2px}
+  .lang-btn{min-width:48px;min-height:48px;padding:.6rem .45rem;font-size:.78rem}
+  .nav-toggle{width:48px;height:48px;min-width:48px;margin:0;justify-self:end}
+  .nav-links{max-height:calc(100dvh - var(--head));overflow-y:auto;overscroll-behavior:contain}
+  .nav-links a{display:flex;align-items:center;min-height:48px;padding:.65rem 0}
+  .hero-title h1{font-size:clamp(2.5rem,12.5vw,5.5rem)}
+  .hero-subtitle{font-size:clamp(1rem,4vw,1.2rem)}
+  .section{padding-block:clamp(3rem,10vw,4.5rem)}
+  h2{font-size:clamp(1.9rem,8vw,2.75rem);line-height:1.15;margin-bottom:1.75rem}
+  h3{font-size:clamp(1.2rem,5vw,1.45rem)}
+  .section p,.info-body p{line-height:1.6}
+  .works-grid,.workshop-gallery{grid-template-columns:minmax(0,1fr);gap:1.25rem}
+  .work-card.wide{grid-template-columns:minmax(0,1fr)}
+  .work-body{min-width:0;padding:clamp(1rem,4vw,1.5rem)}
+  .work-body p,.artist-bios p,.principle p,.nyt p{line-height:1.6;overflow-wrap:anywhere}
+  .work-meta,.work-year{overflow-wrap:anywhere}
+  .artist-bios{grid-template-columns:minmax(0,1fr);gap:1.5rem}
+  .principles-grid{grid-template-columns:minmax(0,1fr)}
+  .workshop-principles-grid{grid-template-columns:minmax(0,1fr)}
+  .principle{grid-template-columns:minmax(3.5rem,5rem) minmax(0,1fr);gap:.75rem;padding:1rem}
+  .principle-sign{white-space:normal;overflow-wrap:anywhere}
+  .nyt-stats{gap:clamp(.75rem,6vw,2rem)}
+  .map-wrap{min-height:0}
+  #map{height:clamp(18rem,75vw,26rem);min-height:18rem}
+  .map-expand,.map-reset,.form-link,.filter-btn,.fallback-row a,.fallback-dot{min-height:48px}
+  .map-expand{bottom:max(.75rem,env(safe-area-inset-bottom));padding-inline:1rem}
+  .fallback-row{flex-wrap:wrap}
+  .fallback-row .fallback-dot,.fallback-row a{min-width:0;min-height:48px}
+  .contact-box,.contact-link,.footer-inner{min-width:0}
+  .contact-link{grid-template-columns:minmax(0,1fr) auto;gap:.5rem .75rem;padding:1rem}
+  .contact-link>span:nth-child(2){min-width:0;overflow-wrap:anywhere}
+  .footer-inner{display:grid;gap:.5rem;overflow-wrap:anywhere}
+  .modal{width:100vw;max-width:none;height:100dvh;max-height:100dvh;border:0}
+  .modal-grid{height:100%;max-height:100dvh}
+  .modal-grid.has-description{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,2fr) minmax(0,3fr)}
+  .modal-body{min-height:0;padding:1.25rem max(1rem,env(safe-area-inset-right)) max(1.25rem,env(safe-area-inset-bottom)) max(1rem,env(safe-area-inset-left));overflow-wrap:anywhere}
+  .modal-close,.gal-nav{width:48px;height:48px;min-width:48px;min-height:48px}
+  .modal-close{top:max(.5rem,env(safe-area-inset-top));right:max(.5rem,env(safe-area-inset-right))}
+  .gal-nav.prev{left:.5rem}.gal-nav.next{right:.5rem}
+  .gal-thumbs{height:72px;padding:6px;gap:8px}
+  .gal-thumb{min-width:60px;min-height:60px}
+  .info-modal,.info-modal.has-image{width:100vw;max-width:100vw;max-height:100dvh;margin:0}
+  .info-modal img{max-height:78dvh}
+  .info-body{padding:1rem max(1rem,env(safe-area-inset-right)) max(1rem,env(safe-area-inset-bottom)) max(1rem,env(safe-area-inset-left))}
+  .info-body h4,.info-body p{overflow-wrap:anywhere}
+  .map-modal .leaflet-top.leaflet-left{top:calc(env(safe-area-inset-top) + 3.75rem)}
 }
 
-.shake{
-  animation: shake 0.16s infinite;
-}
-
-@keyframes shake{
-  0%{ transform:translate(1px,-1px); }
-  25%{ transform:translate(-1px,1px); }
-  50%{ transform:translate(1px,1px); }
-  75%{ transform:translate(-1px,-1px); }
-  100%{ transform:translate(1px,-1px); }
-}
-
-.fragment{
-  position:fixed;
-  max-width:420px;
-  font-size:14px;
-  line-height:1.5;
-  color:black;
-  opacity:0;
-  pointer-events:none;
-  transition: opacity 1.2s ease-out;
-}
-
-.rice{
-  position:fixed;
-  border-radius:75% 25% 75% 25%;
-  transform-origin:center;
-  cursor:grab;
-  user-select:none;
-}
-
-.white{ background:white; }
-.black{ background:black; }
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
 </style>
 </head>
-
 <body>
 
-<div id="title">Error 米 mi</div>
+<header class="site-header" id="siteHeader">
+  <div class="header-inner">
+    <a href="#hero" class="brand">Error <b>米</b> mii</a>
+    <nav class="nav-links" id="navLinks" aria-label="Main">
+      <a href="#projects" data-i18n="nav.projects">Projects</a>
+      <a href="#performances" data-i18n="nav.performances">Performances</a>
+      <a href="#workshop" data-i18n="nav.workshop">Workshop</a>
+      <a href="#about" data-i18n="nav.about">About</a>
+      <a href="#contact" data-i18n="nav.contact">Contact</a>
+    </nav>
+    <div class="lang-switcher" aria-label="Language switcher">
+      <button class="lang-btn" type="button" data-lang="sk" aria-label="Slovak language" aria-pressed="false">SK</button>
+      <button class="lang-btn" type="button" data-lang="en" aria-label="English language" aria-pressed="false">EN</button>
+      <button class="lang-btn active" type="button" data-lang="hu" aria-label="Hungarian language" aria-pressed="true">HU</button>
+    </div>
+    <button class="nav-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navLinks"><span></span><span></span></button>
+    <a href="#hero" class="logo" aria-label="Error 米 mii — back to top">
+      <img src="images/Error_MII_LOGO1_Rajzt%C3%A1bla%201.png" alt="Error 米 mii logo" height="92">
+    </a>
+  </div>
+</header>
 
+<main>
+  <!-- HERO -->
+  <section class="hero" id="hero" aria-label="Error 米 mii — interactive rice field">
+    <div class="hero-title">
+      <h1>Error 米 mii</h1>
+      <a class="hero-subtitle" id="heroSubtitle" href="#about">
+        <span class="hero-subtitle-label" data-i18n="hero.subtitle">Art collective</span>
+        <span class="hero-subtitle-creators">Anikó Mazán &amp; Rokkó Juhász</span>
+      </a>
+    </div>
+    <canvas id="riceCanvas" aria-hidden="true"></canvas>
+    <a href="#projects" class="scroll-cue" aria-label="Scroll to works"></a>
+  </section>
+
+  <!-- WORKS -->
+  <section class="section section-alt" id="works">
+    <div class="container">
+      <div class="filters" role="group" aria-label="Filter works by category">
+        <button class="filter-btn is-active" data-filter="all" aria-pressed="true" data-i18n="filter.all">All</button>
+        <button class="filter-btn" data-filter="projects" aria-pressed="false" data-i18n="filter.projects">Projects</button>
+        <button class="filter-btn" data-filter="performance" aria-pressed="false" data-i18n="filter.performance">Performance</button>
+        <button class="filter-btn" data-filter="workshop" aria-pressed="false" data-i18n="filter.workshop">Workshop</button>
+      </div>
+
+      <!-- PROJECTS -->
+      <div class="work-group" id="projects" data-category="projects">
+        <h3 class="group-title" data-i18n="group.projects">Projects</h3>
+        <div class="works-grid">
+          <article class="work-card wide is-clickable" id="atlasCard" data-modal-img="images/Not_your_tree2.JPG" data-year-label="Started" role="button" tabindex="0" aria-haspopup="dialog" aria-label="Open Not Your Tree — Atlas in a larger view">
+            <div class="work-thumb"><img src="images/not_your_tree.JPG" alt="Not Your Tree — Atlas" loading="lazy"></div>
+            <div class="work-body">
+              <span class="work-tag" data-i18n="filter.projects">Projects</span>
+              <h3 data-i18n="notYourTree.addTitle">Not Your Tree — Atlas</h3>
+              <p data-i18n-html="notYourTreeNarrativeP1">The narrative began with the rescue of four damaged, likely trampled seeds from Bodh Gaya, India—the sacred site where, according to tradition, Buddha attained enlightenment beneath the <button type="button" class="modal-trigger note-trigger" data-note-open>Pippala / Asvattha tree</button>. In Búbánatvölgy, we set these seeds on a path toward manifestation using AI-informed protocols, involving sterilized soil harvested from molehills and controlled micro-ventilation. Through this integration of artificial intelligence, 119 sacred figs were conceived; they are not inhabitants of a pristine, wild nature, but rather techno-organic hybrids.</p>
+              <p data-i18n="notYourTreeNarrativeP2">One must accept that this Bodhi tree—governed by its own temporal pace and singular needs—is an integral part of a shared ecosystem and an autonomous node within an abstract, conceptual network. Ultimately, you must accept that it is Not Your Tree. Our project does not seek a buyer, a master, or an owner; instead, it looks for a custodian—a partner in an asymmetric yet deeply reciprocal relationship.</p>
+              <p class="form-prompt" data-i18n="notYourTreeFormPrompt">You can request your own sacred tree by filling out the Google Form:</p>
+              <div class="form-links" aria-label="Not Your Tree forms by language">
+                <a class="form-link" href="https://forms.gle/iJr4eQV2J9KQCYbNA" target="_blank" rel="noopener noreferrer" aria-label="English (EN) form">EN</a>
+                <a class="form-link" href="https://forms.gle/Xq6xfd7cNr6HdXP4A" target="_blank" rel="noopener noreferrer" aria-label="Hungarian (HU) form">HU</a>
+                <a class="form-link" href="https://forms.gle/Lr6qS95Uo4PpZXTC6" target="_blank" rel="noopener noreferrer" aria-label="Slovak (SK) form">SK</a>
+              </div>
+              <p class="work-follow"><span data-i18n="notYourTreeFollow">Follow the project on Facebook:</span> <a href="https://www.facebook.com/share/1KGn3zQ2oi/" target="_blank" rel="noopener noreferrer"><strong>Not Your Tree</strong></a></p>
+              <span class="work-year">2026</span>
+              <span class="open-hint" aria-hidden="true" data-i18n="notYourTreeOpenHint">Click to view larger</span>
+            </div>
+          </article>
+        </div>
+
+        <div class="nyt" id="not-your-tree">
+          <div class="nyt-intro">
+            <h3 data-i18n="notYourTree.title">Not Your Tree</h3>
+            <p data-i18n-html="notYourTreeP1">Not Your Tree is a convergence of places, destinies, and lives mapped onto a single, living landscape. Each node is a place where, alongside the tending of the earth, stories are born to be shared with one another. Saplings of the same <button type="button" class="note-trigger" data-note-open>Bodhi tree</button> shape our lives to be fuller, warmer, and more welcoming.</p>
+            <p data-i18n="notYourTreeP2">These nodes are imprints: a planted tree, a photograph, a sound recording, or a salvaged story. Mementos of a simple truth—that nothing belongs to us, it is merely our shared heritage.</p>
+          </div>
+          <div class="nyt-atlas">
+            <div class="map-wrap">
+              <div id="map" role="region" aria-label="Preview map of Not Your Tree locations in Hungary"><span class="map-loading" data-i18n="notYourTreeMapLoading">Loading map…</span></div>
+              <button class="map-expand" id="mapExpand" type="button" data-i18n="notYourTreeMapExpand">Expand map</button>
+            </div>
+            <ul class="nyt-stats">
+              <li><strong id="nodeCount">0</strong><span data-i18n="notYourTreeStatsNodes">active nodes</span></li>
+              <li><strong>2026→</strong><span data-i18n="notYourTreeStatsOngoing">ongoing</span></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="works-grid projects-after-atlas">
+          <article class="work-card wide is-clickable" id="tourismCard" data-year-label="Ongoing" data-year="2025 – present" data-gallery='["images/turism%20art1.JPG","images/turism%20art2.JPG","images/turism%20art3.JPG","images/turism%20art4.jpg","images/turism%20art5.png"]' role="button" tabindex="0" aria-haspopup="dialog" aria-label="Open Tourism Art gallery">
+            <div class="work-thumb"><img src="images/turism%20art1.JPG" alt="Tourism Art — image 1 of 5" loading="lazy"></div>
+            <div class="work-body">
+              <span class="work-tag" data-i18n="filter.projects">Projects</span>
+              <h3 data-i18n="tourismTitle">Tourism Art</h3>
+              <p data-i18n="tourismBody">In the interpretation of the errormii project, tourism-art is not merely the aesthetic recycling of sights, but a radical, ritual intervention that transforms the empty spaces of tourist consumption into a laboratory of ‘cosmonomadic’ presence. This approach replaces spectacular emptiness with ritual weight, where art itself is the deconstructed moment: a digital and physical craquelure in which the monumental weight of history and the fragile, often absurd mimetics of human existence fuse into a single, medium-independent thought.</p>
+              <span class="work-year" data-i18n="tourismMeta">2025 – present (ongoing)</span>
+              <span class="open-hint" aria-hidden="true" data-i18n="openGallery">Click to open gallery (5 images)</span>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <!-- WORKSHOP -->
+      <div class="work-group" id="workshop" data-category="workshop">
+        <h3 class="group-title" data-i18n="group.workshop">Workshop</h3>
+        <div class="workshop-principles" aria-labelledby="workshopPrinciplesTitle">
+          <h4 class="workshop-principles-heading" id="workshopPrinciplesTitle">The 7 Elements Structuring Our Workshops – 7 co-</h4>
+          <div class="workshop-principles-grid" id="workshopPrinciples" aria-live="polite"></div>
+        </div>
+        <div class="works-grid workshop-gallery">
+          <article class="work-card is-clickable" data-gallery='["images/workshop_Shanghai_1.JPG","images/Workshop_shanghai_2025_2.JPG","images/workshop_shanghai_2025_3.JPG","images/workshop_Shanghai_2025_4.JPG","images/workshop_Shanghai_2025_5.JPG","images/workshop_Shanghai_2025_6.jpg","images/workshop_Shanghai_2025_7.jpg"]' data-gallery-label="Shanghai, China workshop" role="button" tabindex="0" aria-haspopup="dialog" aria-label="Open Shanghai, China workshop gallery">
+            <div class="work-thumb"><img src="images/workshop_Shanghai_1.JPG" alt="Shanghai, China workshop preview" loading="lazy"></div>
+            <div class="work-body"><h3 class="workshop-title" data-i18n="workshop.shanghai">Shanghai, China</h3><span class="open-hint" aria-hidden="true" data-i18n="workshop.viewGallery">Click to view gallery</span></div>
+          </article>
+          <article class="work-card is-clickable" data-gallery='["images/workshop_jingdenzen_China.JPG","images/workshop_Jingdenzen1.JPG","images/workshop_jingdenzen_2.JPG","images/workshop_jingdenzen3.JPG","images/workshop_jingdenzen4.JPG"]' data-gallery-label="Jingdezhen, China workshop" role="button" tabindex="0" aria-haspopup="dialog" aria-label="Open Jingdezhen, China workshop gallery">
+            <div class="work-thumb"><img src="images/workshop_jingdenzen_China.JPG" alt="Jingdezhen, China workshop preview" loading="lazy"></div>
+            <div class="work-body"><h3 class="workshop-title" data-i18n="workshop.jingdezhen">Jingdezhen, China</h3><span class="open-hint" aria-hidden="true" data-i18n="workshop.viewGallery">Click to view gallery</span></div>
+          </article>
+          <article class="work-card is-clickable" data-gallery='["images/Fouzhoou_2025_1.JPG","images/Fouzhou_2025_2.JPG","images/Fouzhou_2025_3.JPG","images/Fouzhou_2025_4.JPG"]' data-gallery-label="Fuzhou, China workshop" role="button" tabindex="0" aria-haspopup="dialog" aria-label="Open Fuzhou, China workshop gallery">
+            <div class="work-thumb"><img src="images/Fouzhoou_2025_1.JPG" alt="Fuzhou, China workshop preview" loading="lazy"></div>
+            <div class="work-body"><h3 class="workshop-title" data-i18n="workshop.fuzhou">Fuzhou, China</h3><span class="open-hint" aria-hidden="true" data-i18n="workshop.viewGallery">Click to view gallery</span></div>
+          </article>
+          <article class="work-card wide workshop-trencin-card">
+            <h3 class="workshop-title" data-i18n="workshop.trencin">Trenčín, Slovakia</h3>
+            <div class="workshop-trencin-video">
+              <div class="workshop-instagram">
+                <blockquote class="instagram-media" data-instgrm-permalink="https://www.instagram.com/p/DctJG33NLQu/" data-instgrm-version="14">
+                  <a href="https://www.instagram.com/p/DctJG33NLQu/" target="_blank" rel="noopener noreferrer">View this post on Instagram</a>
+                </blockquote>
+              </div>
+              <a class="workshop-instagram-link" href="https://www.instagram.com/p/DctJG33NLQu/" target="_blank" rel="noopener noreferrer">Open on Instagram ↗</a>
+            </div>
+            <div class="workshop-trencin-gallery is-clickable" data-gallery='["images/workshop_trencsen_E-5.jpg","images/workshop_trencsen_E-9.jpg","images/workshop_trencsen_E-12.jpg","images/workshop_Trencsen_team.jpg","images/workshop_trencsen-2-WS-1.png","images/workshop_trencsenE-1.jpg","images/workshop-trencsen-3.png"]' data-gallery-label="Trenčín, Slovakia workshop" role="button" tabindex="0" aria-haspopup="dialog" aria-label="Open Trenčín, Slovakia workshop photo gallery">
+              <div class="work-thumb"><img src="images/workshop_trencsen_E-5.jpg" alt="Trenčín, Slovakia workshop preview" loading="lazy"></div>
+              <div class="work-body"><span class="open-hint" aria-hidden="true" data-i18n="workshop.viewGallery">Click to view gallery</span></div>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <!-- PERFORMANCES -->
+      <div class="work-group" id="performances" data-category="performance">
+        <h3 class="group-title" data-i18n="group.performances">Performances</h3>
+        <div class="works-grid">
+          <article class="work-card wide is-clickable" data-gallery='["images/rice-performance..png","images/rice_performance_2.png","images/rice_performance_3.JPG"]' role="button" tabindex="0" aria-haspopup="dialog" aria-label="Open 米 (Rice Performance) image gallery">
+            <div class="work-thumb"><img src="images/rice-performance..png" alt="米 (Rice Performance) at the 21st Open Performance Art Festival, Shanghai — image 1 of 3" loading="lazy"></div>
+            <div class="work-body">
+              <span class="work-tag" data-i18n="filter.performance">Performance</span>
+              <h3 data-i18n="riceTitle">米 (Rice Performance)</h3>
+              <p class="work-meta" data-i18n="riceMeta">21st Open Performance Art Festival · Shanghai · 2025.10.27 · Curator: Chen Jin</p>
+              <p data-i18n="riceIntro">The performance is an improvisational response to the relative value of time, explored through the perspectives of two artists.</p>
+              <p data-i18n="riceP1">Anikó sits at a table, attempting to untangle a ball of thread and wrap it around her hand. The gesture of winding represents cyclicality, a restitution for errors, and simultaneously serves as a rational, measurable element within the performance. In the context of the auction hammer, this act takes on an administrative quality, evoking associations with legal and institutional structures. The static posture emphasizes the significance of these subtle gestures, while incorporating the feminine principle—traditional female practices (such as embroidery) and the experience of inner, subjective time.</p>
+              <p data-i18n="riceP2">In contrast, Rokko’s presence in the space is dynamic. First, he activates a video loop that runs throughout the performance, showcasing an earlier collaborative work. He then spreads a white canvas over the black floor, places a clock upon it, and starts it. The simultaneous initiation of the clock and Rokkó’s movements creates a shared temporal field—the action itself defines time.</p>
+              <p data-i18n="riceP3">The next element Rokko introduces is a measuring tape pulled from his mouth. With this gesture, he incorporates both the surrounding environment and the physical architecture of the body, spanning its external and internal aspects. His movements convey that time is not absolute but relative, defined strictly through action and measurement. Historical, social, and technical structures—symbolized by the measuring tools—determine how time and space are perceived and administered.</p>
+              <p data-i18n="riceP4">As a final visible gesture, Rokko draws a curtain, leaving the clock outside while the sound remains within. Separating visual information (the clock) from audible information (the ticking) signals a division between visible and perceptible time. Ultimately, he removes the sound-producing element from the space behind the curtain. The black clothing and minimalist environment suppress personal traits, thereby foregrounding the bodily movements and the objects used. These actions render the measurable, relative dimension of time visible.</p>
+              <p data-i18n="riceP5">The hammer strikes executed by Anikó—performed after each unit of unwound thread—serve as an auditory reinforcement of the material and quantifiable dimension of time.</p>
+              <span class="work-year">2025</span>
+              <span class="open-hint" aria-hidden="true" data-i18n="clickLarger">Click to view larger</span>
+            </div>
+          </article>
+
+          <article class="work-card wide give-take-card is-clickable" data-gallery='["images/GIVE-TAKE_chair.JPG","images/give_take_2.JPG","images/give_take_3.JPG","images/give_take_4.JPG"]' role="group" tabindex="0" aria-keyshortcuts="Enter Space" aria-haspopup="dialog" data-i18n-aria-label="giveTakeCardLabel" aria-label="Give &amp; Take performance — press Enter or Space to open image gallery">
+            <div class="work-thumb"><img src="images/GIVE-TAKE_chair.JPG" alt="Signed wooden piece held in a hand during the Give &amp; Take performance" loading="lazy"></div>
+            <div class="work-body">
+              <span class="work-tag" data-i18n="filter.performance">Performance</span>
+              <h3 data-i18n="giveTakeTitle">Give-Take</h3>
+              <p class="work-meta" data-i18n="giveTakeMeta">TAI Gallery, Shanghai · The 8th Cement Park Live Art Festival · December 23, 2025 · approx. 33 min</p>
+              <section class="give-take-essay" role="region" aria-roledescription="carousel" data-i18n-aria-label="giveTakeEssayLabel" aria-label="Give &amp; Take essay">
+                <p class="give-take-essay-intro" data-i18n="giveTakeSlide1Intro">A text by Anikó Mazán </p>
+                <article class="give-take-slide" id="giveTakeSlide1" role="group" aria-roledescription="slide" data-i18n-aria-label="giveTakeSlide1Label" aria-label="Slide 1">
+                  <h4 data-i18n="giveTakeSlide1Title">4 – A Chair with a Receipt</h4>
+                  <p data-i18n="giveTakeSlide1P1">Performances that end in the destruction of an object usually begin by sanctifying it. The object is lent by a museum, inherited through a lineage, or fabricated to carry symbolic charge, and its loss is then staged as sacrilege or as liberation. We wanted to start from somewhere less romantic. The chair at the centre of Give &amp; Take—a high-backed official’s hat chair (guanmaoyi) with a red brocade cushion—was bought by us from a furniture and antiques dealer in Shanghai, who described it as a nineteenth-century Qing-dynasty piece in the Ming manner. We keep that description in the work as what it is: a commercial attribution, a sentence spoken across a counter, which converted an anonymous piece of joinery into an object with a date, a dynasty and a price.</p>
+                  <p data-i18n="giveTakeSlide1P2">We did not want to present the chair as an untouchable relic, still less as a stand-in for “Chinese tradition” to be ritually broken for a foreign gaze. Its cultural weight is real, but that weight was already in circulation, already priced, already mediated by the market of the city in which we were working. We did not import a symbol in order to sacrifice it. We went into Shanghai and acquired something that Shanghai was already selling. What we destroy in the performance is therefore not an emblem but a purchase, made within the same economy of exchange that our title names. To give, in this work, begins with having taken. Grounding the sacrifice in our own material circumstances is also how we refuse the Orientalist reading, which depends on distance, and which a chair bought in the same city where it is broken does not afford us or our audience.</p>
+                  <p data-i18n="giveTakeSlide1P3">Nor is its form accidental. The projecting ends of the crest rail recall the wings of an official’s cap, so that the chair is a seat of rank, built to hold a body upright within a hierarchy. To watch such a seat come apart in front of a room of onlookers is to watch a small architecture of authority lose its joints. We do not insist on this reading. We simply make it accessible.</p>
+                </article>
+                <article class="give-take-slide" id="giveTakeSlide2" role="group" aria-roledescription="slide" data-i18n-aria-label="giveTakeSlide2Label" aria-label="Slide 2" hidden>
+                  <h4 data-i18n="giveTakeSlide2Title">1 – The Mask</h4>
+                  <p data-i18n="giveTakeSlide2P1">We enter as two figures in matching white shirts and dark trousers, and sit at opposite ends of a long wooden table, each in a carved chair. One of us wears a gas mask. The other’s head is wrapped in a dense skein of dark yarn until the face disappears and strands hang like a curtain. Between us, on the table, we have scattered rice—black grains and white grains—and a little red cord.</p>
+                  <p data-i18n="giveTakeSlide2P2">The mask is our most legible citation. In Terror from the Air, Peter Sloterdijk locates the birth of modern atmospheric thinking in the chlorine clouds of Ypres in 1915, when the enemy ceased to target bodies and began to target the air that bodies need. The environment, until then the unnoticed condition of life, became an explicit object of attack, to be made visible, measured and defended. His “atmoterrorism” names the exposure of the breathable as a weapon. We borrow the mask as the emblem of that moment: a prosthesis that seals the individual into a private climate and thereby confesses that the shared climate can no longer be trusted.</p>
+                  <p data-i18n="giveTakeSlide2P3">Martin Heidegger, in “The Question Concerning Technology,” gives us a second vocabulary for the same object. Modern technology, he argues, does not merely make things; it reveals everything, the human being included, as standing-reserve (Bestand), as stock awaiting ordering and use—a mode of revealing he calls enframing (Gestell). The gas mask is enframing’s most literal garment. It treats the lungs as a resource to be kept in service and the body as a unit whose continued functioning is the entire point. Sealed inside it, we are not exempt from this logic, but dramatised by it.</p>
+                  <p data-i18n="giveTakeSlide2P4">The yarn does something adjacent but different. The mask is industrial, standardised and military—a technology of survival issued by institutions. The yarn is domestic and handmade—a technology of withdrawal that looks like care, functioning simultaneously as blindfold, gag and cocoon. Placed face to face across the table, the two forms stage two grammars of the same condition: the biopolitical sealing of the body against a hostile atmosphere, and the intimate closing of the senses against a world too loud to meet. Neither of us can fully see or be seen. Our hands, however, remain free, and we begin working across the table. Speech is withheld, so the hands must speak.</p>
+                </article>
+                <article class="give-take-slide" id="giveTakeSlide3" role="group" aria-roledescription="slide" data-i18n-aria-label="giveTakeSlide3Label" aria-label="Slide 3" hidden>
+                  <h4 data-i18n="giveTakeSlide3Title">3 – The Accursed Share</h4>
+                  <p data-i18n="giveTakeSlide3P1">On the floor, beyond the table, lie two saws with red handles, each bearing the words “Give &amp; Take” and each tied by white cord to one of our chairs. They are in the room throughout, small, bright and unobtrusive, until the work turns on them. At a certain point the audience is permitted—or perhaps obliged—to pick them up.</p>
+                  <p data-i18n="giveTakeSlide3P2">This is the work’s most dangerous passage and its theoretical hinge. Claire Bishop’s account of antagonistic aesthetics, developed in response to the consensual conviviality of much relational art, argues that the most politically serious participatory work does not dissolve conflict into community, but produces and sustains it. The audience is not invited to be happy together. It is placed in a situation where its own appetites, hesitations and complicities become the material. The tether matters here. The saw is bound to the chair, and the chair is occupied: a body sits in the object that the room is invited to cut. To saw is to take, and the seat and its sitter receive the consequence, yet the tool is labelled with the word give. We do not resolve this dilemma by instruction. It is resolved, or failed, by the people holding the handle.</p>
+                  <p data-i18n="giveTakeSlide3P3">Heidegger’s analysis of equipment in Being and Time helps us name what happens next. A chair in ordinary use withdraws from attention; we sit in it without noticing it, and its being consists in that transparent usefulness. Only when equipment breaks does it become conspicuous, obtrusive, present as a mere thing, and the web of relations in which it was embedded briefly shows itself. As the saws bite, our chair stops being furniture and becomes an event. A used thing is turned into a visible one, and the audience, whose hands do this, is made to feel the cost of visibility.</p>
+                  <p data-i18n="giveTakeSlide3P4">Georges Bataille’s notion of the accursed share gives us the sharpest frame. In his general economy, every society produces more energy than it can usefully reinvest, and this excess must be spent—gloriously or catastrophically—in festival, sacrifice, war or luxury. The surplus cannot be conserved. The only question is whether it is expended knowingly or suffered blindly. A chair sold to us as nineteenth-century is a small store of value, and its destruction before an audience is an expenditure without return. By making the audience the agent of that loss, we dramatise Bataille’s insight at human scale: the surplus is spent not by us alone, but by a crowd that is also filming—a second economy of recording runs parallel to the first economy of loss. The image of raised phones turns sacrifice into images even as it happens, perhaps the most contemporary form of the accursed share: an expenditure immediately banked again as data.</p>
+                </article>
+                <nav class="give-take-pagination" data-i18n-aria-label="giveTakePaginationLabel" aria-label="Essay pagination">
+                  <button type="button" class="give-take-prev" data-i18n-aria-label="giveTakePrevious" aria-label="Previous slide" aria-controls="giveTakeSlide1" disabled>←</button>
+                  <span class="give-take-pagination-count" aria-live="polite" aria-atomic="true">01 / 02</span>
+                  <button type="button" class="give-take-next" data-i18n-aria-label="giveTakeNext" aria-label="Next slide" aria-controls="giveTakeSlide2">→</button>
+                </nav>
+                <footer class="give-take-essay-source">
+                  <a href="https://irodalmiszemle.sk/2025/12/orulet-irodalmi-szemle-2025-12/" target="_blank" rel="noopener noreferrer" data-i18n="giveTakeSource">Published in Irodalmi Szemle (December 2025)</a>
+                </footer>
+              </section>
+              <span class="work-year">2025</span>
+              <span class="open-hint" aria-hidden="true" data-i18n="clickLarger">Click to view larger</span>
+            </div>
+          </article>
+
+          <article class="work-card wide is-clickable" data-gallery='["images/trace.png","images/Trace_varanasi_2.jpg","images/Trace_varanasi_3.JPG"]' role="button" tabindex="0" aria-haspopup="dialog" aria-label="Open 2025 | Trace image gallery">
+            <div class="work-thumb"><img src="images/trace.png" alt="2025 | Trace — performance still" loading="lazy"></div>
+            <div class="work-body">
+              <span class="work-tag" data-i18n="filter.performance">Performance</span>
+              <h3 data-i18n="traceTitle">2025 | Trace</h3>
+              <p class="work-meta" data-i18n="traceMeta">DERA ART Community · Varanasi</p>
+              <p data-i18n="traceP1">The performance Trace, set within the crumbling walls of the DERA ART Community in Varanasi, is a material manifestation of human presence and memory. The artistic action begins with a spatial ritual: Anikó Mazán and Rokko Juhász enter two separate, dilapidated rooms, bridging the boundaries of former walls and private domestic units. This entry defines the spatiotemporal framework of the performance.</p>
+              <p data-i18n="traceP2">Upon arriving in the shared space, the artists switch on their headlamps; their cold light amidst the darkening ruins provides a focal point of rationality and pure attention. This is followed by simultaneous actions: Anikó removes her shoes and begins to unroll thirty meters of tulle, establishing a direct connection with the ruined ground through her barefoot stride. Concurrently, Rokko places a massive iron nail in his mouth and begins to wind a long white thread onto it, while tracing the sign of infinity (lemniscate) in the air with his hands. This internal compression (the formation of the thread-heart in the mouth) and external expansion (the unfolding of the tulle) generate the fundamental tension of the performance.</p>
+              <span class="open-hint" aria-hidden="true" data-i18n="clickLarger">Click to view larger</span>
+            </div>
+          </article>
+
+          <article class="work-card wide is-clickable" data-gallery='["images/days-of-war.jpg","images/days_of_war_2.jpg","images/days_of_war_3.jpg","images/day_of_war_4.jpg"]' role="button" tabindex="0" aria-haspopup="dialog" aria-label="Open 2026 | Days of War (3-in-1 Performance) image gallery">
+            <div class="work-thumb"><img src="images/days-of-war.jpg" alt="2026 | Days of War — 3-in-1 performance, image 1 of 4" loading="lazy"></div>
+            <div class="work-body">
+              <span class="work-tag">Performance</span>
+              <h3 data-i18n="daysTitle">2026 | Days of War (3-in-1 Performance)</h3>
+              <p class="work-meta" data-i18n="daysMeta">Fuzhou, China · Abandoned industrial site</p>
+              <p data-i18n="daysP1">This performance examines the unprocessable trauma of war through two parallel yet intertwined narratives. Anikó Mazán acts as the “Chronicler”: in a ritual practice spanning four years, she daily documents the time elapsed since the war began. Dressed in pyjamas and a gas mask, she marks the number 3987 amidst shattered ink bottles, symbolizing the fragility of existence and the horror of statistics.</p>
+              <p data-i18n="daysP2">Rokko Juhász acts as the “Reactor”: dressed in a suit, he initially mimics conflict with aggressive gestures (shooting rubber bands), then becomes a carrier of destruction by binding industrial debris found on-site to his legs. Under the accumulating physical burden, he eventually becomes immobilized.</p>
+              <p data-i18n="daysP3">The fusion of these two actions gives birth to a tertiary meaning: war as collective paralysis. When abstract time-keeping (numbers) meets physical crippling (weight), the process culminates in a shared, silent freeze. The empty vial pulled from the mouth serves as a metaphor for unspeakable trauma and ultimate emptiness.</p>
+              <span class="open-hint" aria-hidden="true">Click to view larger</span>
+            </div>
+          </article>
+
+          <article class="work-card wide is-clickable" role="button" tabindex="0" aria-haspopup="dialog" aria-label="Open Kala-Sutra in a larger view">
+            <div class="work-thumb"><img src="images/Kala_sutra.jpeg" alt="Kala-Sutra — performance with a 40-meter rope and white shirts" loading="lazy"></div>
+            <div class="work-body">
+              <span class="work-tag">Performance</span>
+              <h3>Kala-Sutra</h3>
+              <p>The performance explores the social body at the threshold of subjective time and material decay. The 40-meter tensioned axis between the 30-year-old female and the 62-year-old male agent serves as a physical manifestation of generational transfer; the shared rope loop secured at their waists visualizes ontological interdependence. With ritualistic slowness, the participants strip off 10 white shirts each, suspending them onto the rope stretched between the two poles. Following the slow, horizontal transfer of the garments, the artists don each other’s discarded shirts, performing a radical gesture of somatic empathy and identity exchange: the physical appropriation of the “other’s” experiential skin. The layers of turmeric-impregnated plaster on their trousers disintegrate through the continuous erosion of time, rendering the body a vessel for impermanence and inheritance.</p>
+              <span class="work-year">2025</span>
+              <span class="open-hint" aria-hidden="true">Click to view larger</span>
+            </div>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ABOUT -->
+  <section class="section" id="about">
+    <div class="container">
+      <h2 data-i18n="about.title">About</h2>
+      <h3 class="principles-title" data-i18n="principles.title">ERRORMII: Principles &amp; Visual Signatures</h3>
+      <div class="principles-grid">
+        <article class="principle">
+          <span class="principle-sign" aria-hidden="true">[ ⊙ ]</span>
+          <div>
+            <h4 data-i18n="principle.time">Time Deconstruction</h4>
+            <p data-i18n="principle.timeText">The core axis of our performances centers around time and the fragility of human memory. Through ritualistic actions (utilizing temporal instruments and threads), we untie the knots of linear time, confronting the spectator with transience.</p>
+          </div>
+        </article>
+        <article class="principle">
+          <span class="principle-sign" aria-hidden="true">[ 十 ]</span>
+          <div>
+            <h4 data-i18n="principle.space">Space and Measure (Site-Specificity)</h4>
+            <p data-i18n="principle.spaceText">Our works are invariably site-specific. We do not merely utilize space; we account for its history, cultural embeddedness, and geopolitical networks, treating global locations as "energetic anchors."</p>
+          </div>
+        </article>
+        <article class="principle">
+          <span class="principle-sign" aria-hidden="true">[ 米 ]</span>
+          <div>
+            <h4 data-i18n="principle.participation">Participation and Collective Body</h4>
+            <p data-i18n="principle.participationText">Characterizing both our performances and workshops, spectators transition from passive observers into active participants and fragile co-creators through the gestures of gifting and sharing (the collective "mi").</p>
+          </div>
+        </article>
+        <article class="principle">
+          <span class="principle-sign" aria-hidden="true">[ ∅ ]</span>
+          <div>
+            <h4 data-i18n="principle.digital">Digital Presence as a Dysfunctional Monument</h4>
+            <p data-i18n="principle.digitalText">Our digital interfaces (website, social media) function not as traditional portfolios, but as functionless digital monuments modeling code vulnerability and semiotic entropy.</p>
+          </div>
+        </article>
+        <article class="principle">
+          <span class="principle-sign" aria-hidden="true">[ × ]</span>
+          <div>
+            <h4 data-i18n="principle.error">Error and Humor as Productive Indices</h4>
+            <p data-i18n="principle.errorText">System error serves as our primary generative catalyst. Through visual humor and paradoxes, the system chuckles at its own crash, setting a philosophical trap for the illusion of perfection.</p>
+          </div>
+        </article>
+        <article class="principle">
+          <span class="principle-sign" aria-hidden="true">[ * ]</span>
+          <div>
+            <h4 data-i18n="principle.ai">Artificial Intelligence and Technological Experimentation</h4>
+            <p data-i18n="principle.aiText">We are not merely users of AI and digital tools, but active experimenters; the algorithm operates within us as a digital agent and co-creator, blurring the boundary between human intent and algorithmic interpretation.</p>
+          </div>
+        </article>
+      </div>
+      <section class="artist-bio" aria-labelledby="artist-bio-title">
+        <h3 id="artist-bio-title" data-i18n="bio.title">Bio</h3>
+        <p class="artist-bio-intro" data-i18n="bio.intro">errormii is an interdisciplinary artistic collaboration established in 2025 by Anikó Mazán and Rokko Juhász. Operating as a cosmonomad laboratory, their practice synthesizes decades of performance heritage with contemporary research into glitch aesthetics, media philosophy, and relational art.</p>
+        <img class="artist-bio-photo" src="images/about.jpeg" alt="errormii artists Anikó Mazán and Rokkó Juhász">
+        <div class="artist-bios">
+          <article>
+            <h4><span data-i18n="artist.aniko.name">Aniko Mazán</span> <span>(b. 1995, Slovakia)</span></h4>
+            <p data-i18n="artist.aniko.text">Aniko Mazán is a Slovak-Hungarian visual artist and art educator based between Slovakia and Hungary. She graduated in Painting from the Hungarian University of Fine Arts, Budapest, in 2022. Her practice fluidly navigates painting, installation, research-based projects, and performance, often examining time, memory, and the relationship between landscape and human intervention. Among her ongoing works are the long-term projects Dies Belli 1 and Dies Belli 2, which critically reflect on contemporary geopolitical conflicts through conceptual and digital formats. She is also developing ecological research projects related to plant systems along the Danube region. Mazán is a member of the InSitu artist collective and actively participates in international exhibitions, collaborative projects, and performance festivals.</p>
+          </article>
+          <article>
+            <h4><span data-i18n="artist.rokko.name">Rokko Juhász</span> <span>(b. 1963, Slovakia)</span></h4>
+            <p data-i18n="artist.rokko.text">Rokko Juhász is a prominent performance artist, poet, writer, and cultural instigator based in Esztergom, Hungary. Since 1988, he has been a defining figure in the global performance art scene, executing hundreds of performances across 54 countries and five continents. His practice is rooted in site-specific performance, social interventions, and long-term ephemeral projects that challenge the boundaries between public space and private narrative.</p>
+            <p>As a leading educator, Juhász has conducted specialized workshops and university courses since 2009, fostering the next generation of performance artists in diverse cultural contexts, including Chile, Israel, China, Hong Kong, India, and throughout Europe. Between 1987 and 2007, he led Studio Erté (International Multimedia Art Organizing Company). Under the banner of Transart Communication, he helmed 37 editions of international multimedia and performance art festivals and conferences. In 2000, he co-initiated the Kassák Center for Intermedia Creativity. He has published seven volumes of poetry and two biographical travelogues, including his recent monograph, <em>The Life of a Performer II</em> (2024).</p>
+          </article>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section class="section section-alt" id="contact">
+    <div class="container">
+      <h2 data-i18n="contact.title">Contact</h2>
+      <div class="contact-box">
+        <p data-i18n="contact.subtitle">Collaborations, exhibitions, press and everything in between.</p>
+        <a class="contact-link" href="mailto:eeerrormii@gmail.com"><span class="contact-label" data-i18n="contact.email">Email</span><span>eeerrormii@gmail.com</span><span aria-hidden="true">→</span></a>
+        <a class="contact-link" href="https://www.instagram.com/errormii/" target="_blank" rel="noopener noreferrer"><span class="contact-label" data-i18n="contact.instagram">Instagram</span><span>@errormii</span><span aria-hidden="true">↗</span></a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="container footer-inner">
+    <span>© <span id="year">2025</span> Error 米 mii</span>
+    <span data-i18n="footer.byline">Anikó Mazán &amp; Rokko Juhász — SK / HU</span>
+  </div>
+</footer>
+
+<div class="rice-drift-layer" aria-label="Interactive floating rice grains">
+  <button class="rice-grain white" type="button" aria-label="White rice grain. Drag to move; use arrow keys to reposition."></button>
+  <button class="rice-grain black" type="button" aria-label="Black rice grain. Drag to move; use arrow keys to reposition."></button>
+</div>
+
+<dialog class="map-modal" id="mapDialog" aria-label="Not Your Tree atlas map">
+  <div id="mapBig"></div>
+  <button class="modal-close map-close" type="button" aria-label="Back to the main page" data-i18n="modal.back">Back</button>
+  <button class="map-reset" type="button" data-i18n="map.reset">Show all locations</button>
+</dialog>
+
+<dialog class="info-modal" id="infoDialog" aria-label="Location details">
+  <button class="modal-close" type="button" aria-label="Close">×</button>
+  <img alt="" hidden>
+  <div class="info-body"><h4></h4><p></p></div>
+</dialog>
+
+<dialog class="note-modal" id="pippalaNoteDialog" aria-labelledby="pippalaNoteTitle">
+  <button class="modal-close" type="button" aria-label="Close note" data-i18n-aria-label="notYourTreeNoteClose">×</button>
+  <h2 id="pippalaNoteTitle" data-i18n="notYourTreeNoteTitle">Pippala / Asvattha</h2>
+  <p data-i18n="notYourTreeNoteP1"></p>
+  <p data-i18n="notYourTreeNoteP2"></p>
+  <p data-i18n="notYourTreeNoteP3"></p>
+</dialog>
+
+<dialog class="modal" id="workDialog" aria-label="Project or performance image">
+  <button class="modal-close" type="button" aria-label="Close">×</button>
+  <div class="modal-grid">
+    <div class="modal-media">
+      <img alt="">
+      <div class="gal" hidden>
+        <button class="gal-nav prev" type="button" aria-label="Previous image">‹</button>
+        <button class="gal-nav next" type="button" aria-label="Next image">›</button>
+        <span class="gal-count" aria-live="polite"></span>
+        <div class="gal-thumbs"></div>
+      </div>
+    </div>
+    <div class="work-body modal-body" hidden></div>
+  </div>
+</dialog>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="script.js"></script>
 <script>
-const title=document.getElementById("title");
+/* ---------- Header: solid after the hero, mobile menu ---------- */
+const header = document.getElementById('siteHeader'),
+      toggle = document.getElementById('navToggle'),
+      links  = document.getElementById('navLinks');
+const onScroll = () => header.classList.toggle('solid', scrollY > 40);
+addEventListener('scroll', onScroll, { passive: true }); onScroll();
 
-/* ------------------ FRAGMENTS ------------------ */
+function setMenu(open) {
+  links.classList.toggle('open', open);
+  header.classList.toggle('menu-open', open);
+  toggle.setAttribute('aria-expanded', open);
+  toggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+}
+toggle.addEventListener('click', () => setMenu(!links.classList.contains('open')));
+links.addEventListener('click', e => { if (e.target.tagName === 'A') setMenu(false); });
+document.getElementById('heroSubtitle').addEventListener('click', e => {
+  e.preventDefault();
+  document.getElementById('about').scrollIntoView({
+    behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+    block: 'start'
+  });
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && links.classList.contains('open')) {
+    setMenu(false);
+    toggle.focus();
+  }
+});
 
-const conceptParts=[
-"Error 米 mi is an interdisciplinary art project",
-"focused on digital identity and global culture",
-"and on a fundamental life-sustaining element.",
-"Rice — 米 — .",
-"rice.",
-"rice.",
-"rice.",
-"rice.",
-"米.",
-"rice.",
-"rice.",
-"Memory becomes unreliable.",
-"memory unreliable."
+/* ---------- Works filter (All / Projects / Performance / Workshop) ---------- */
+const btns = document.querySelectorAll('.filter-btn'), groups = document.querySelectorAll('.work-group');
+function setFilter(f) {
+  btns.forEach(b => { const on = b.dataset.filter === f; b.classList.toggle('is-active', on); b.setAttribute('aria-pressed', on); });
+  groups.forEach(g => g.hidden = f !== 'all' && g.dataset.category !== f);
+  if (window.nytMap) setTimeout(() => nytMap.invalidateSize(), 0);
+}
+btns.forEach(b => b.addEventListener('click', () => setFilter(b.dataset.filter)));
+/* Menu links always reveal their section, even if it was filtered out */
+document.querySelectorAll('a[href="#projects"],a[href="#performances"],a[href="#workshop"]').forEach(a => a.addEventListener('click', () => setFilter('all')));
 
+/* ---------- Full-screen rice field ---------- */
+(function () {
+  const hero = document.getElementById('hero'), cv = document.getElementById('riceCanvas'), ctx = cv.getContext('2d');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let W, H, grains = [], mouse = { x: -999, y: -999 }, running = false;
+
+  function resize() {
+    const r = cv.getBoundingClientRect(), d = Math.min(devicePixelRatio || 1, 2);
+    W = r.width; H = r.height; cv.width = W * d; cv.height = H * d; ctx.setTransform(d, 0, 0, d, 0, 0);
+    const n = Math.min(340, Math.round(W * H / 5500));
+    grains = Array.from({ length: n }, (_, i) => ({
+      x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - .5) * .5, vy: (Math.random() - .5) * .35,
+      a: Math.random() * 6.28, va: (Math.random() - .5) * .012, p: Math.random() * 6.28,
+      w: 20 + Math.random() * 14, h: 7 + Math.random() * 6, c: i % 2 ? '#fff' : '#000'
+    }));
+    draw();
+  }
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    for (const g of grains) {
+      if (!reduce) {
+        const dx = g.x - mouse.x, dy = g.y - mouse.y, d = Math.hypot(dx, dy);
+        if (d < 130) { const f = (1 - d / 130) * .6; g.vx += dx / d * f; g.vy += dy / d * f; g.va += (Math.random() - .5) * .01; }
+        g.vx *= .97; g.vy *= .97; g.p += .01;
+        g.x += g.vx + Math.cos(g.p) * .12; g.y += g.vy + Math.sin(g.p * .8) * .1; g.a += g.va;
+        if (g.x < -40) g.x = W + 40; else if (g.x > W + 40) g.x = -40;
+        if (g.y < -20) g.y = H + 20; else if (g.y > H + 20) g.y = -20;
+      }
+      ctx.save(); ctx.translate(g.x, g.y); ctx.rotate(g.a); ctx.fillStyle = g.c;
+      ctx.beginPath(); ctx.ellipse(0, 0, g.w / 2, g.h / 2, 0, 0, 6.28); ctx.fill(); ctx.restore();
+    }
+  }
+  function loop() { if (!running) return; draw(); requestAnimationFrame(loop); }
+
+  addEventListener('pointermove', e => { const r = cv.getBoundingClientRect(); mouse.x = e.clientX - r.left; mouse.y = e.clientY - r.top; });
+  document.addEventListener('pointerleave', () => { mouse.x = mouse.y = -999; });
+  addEventListener('resize', resize);
+  /* only animate while the hero is on screen */
+  new IntersectionObserver(([en]) => {
+    const vis = en.isIntersecting;
+    if (vis && !running && !reduce) { running = true; loop(); } else if (!vis) running = false;
+  }).observe(hero);
+  resize();
+})();
+
+/* ---------- Map library loader (tries three CDNs, so one blocked host cannot break the map) ---------- */
+const LEAFLET_SOURCES = [
+  'https://unpkg.com/leaflet@1.9.4/dist/',
+  'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/',
+  'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/'
 ];
-
-let revealed=0;
-
-function revealFragment(){
- if(revealed>=conceptParts.length) return;
-
- const d=document.createElement("div");
- d.className="fragment";
- d.innerText=conceptParts[revealed++];
-
- d.style.left=Math.random()*80+"vw";
- d.style.top=Math.random()*80+"vh";
- d.style.transform=`rotate(${Math.random()*8-4}deg)`;
-
- document.body.appendChild(d);
-
- requestAnimationFrame(()=> d.style.opacity=0.92);
-
- setTimeout(()=>{
-   d.style.opacity=0;
-   setTimeout(()=> d.remove(),1200);
- },2000+Math.random()*2500);
+function loadTag(tag, attrs) {
+  return new Promise((resolve, reject) => {
+    const n = document.createElement(tag); Object.assign(n, attrs);
+    const t = setTimeout(() => { n.remove(); reject(new Error('timeout')); }, 8000);
+    n.onload = () => { clearTimeout(t); resolve(); };
+    n.onerror = () => { clearTimeout(t); n.remove(); reject(new Error('load failed')); };
+    document.head.append(n);
+  });
+}
+function leafletCssOk() {                                   /* is the Leaflet stylesheet really applied? */
+  const t = document.createElement('div'); t.className = 'leaflet-pane'; t.style.visibility = 'hidden';
+  document.body.append(t); const ok = getComputedStyle(t).position === 'absolute'; t.remove(); return ok;
+}
+async function ensureLeaflet() {
+  if (window.L && leafletCssOk()) return true;
+  for (const base of LEAFLET_SOURCES) {
+    try {
+      const jobs = [];
+      if (!leafletCssOk()) jobs.push(loadTag('link', { rel: 'stylesheet', href: base + 'leaflet.css' }));
+      if (!window.L) jobs.push(loadTag('script', { src: base + 'leaflet.js' }));
+      await Promise.all(jobs);
+      if (window.L && leafletCssOk()) return true;
+    } catch (e) { /* try the next host */ }
+  }
+  return false;
 }
 
-/* ------------------ RICE FACTORY ------------------ */
+/* ---------- Not Your Tree atlas ---------- */
+/* Coordinates are decimal degrees. To get exact ones: right-click the spot in Google Maps and click
+   the numbers at the top of the menu to copy them. Búbánatvölgy is currently an estimate. */
+const NODES = [
+  { name: 'Békés (Nagyrét tanya), Hungary', lat: 46.7667, lng: 21.1167, image: 'images/not_your_tree_BMZ_Békés_nagyrét_tanya.jpeg', caption: 'Nagyrét tanya, Békés, Hungary' },
+  { name: 'Búbánatvölgy, Hungary', lat: 47.7790, lng: 18.8010, image: 'images/not_your_tree_3.jpg', caption: 'Here sprouted the saplings' }
+];
+(async function () {
+  const info = document.getElementById('infoDialog'), mapDlg = document.getElementById('mapDialog');
+  const iImg = info.querySelector('img'), iTitle = info.querySelector('h4'), iText = info.querySelector('p');
+  const preview = document.getElementById('map'), expandBtn = document.getElementById('mapExpand');
+  document.getElementById('nodeCount').textContent = NODES.length;
 
-function makeRice(color,x,y){
- const el=document.createElement("div");
- el.className="rice "+color;
+  /* Popup with text + image for a location */
+  function showInfo(n) {
+    iTitle.textContent = n.name;
+    iText.textContent = n.caption || ''; iText.hidden = !n.caption;
+    info.classList.toggle('has-image', !!n.image);
+    if (n.image) { iImg.src = n.image; iImg.alt = n.caption || n.name; iImg.hidden = false; } else { iImg.hidden = true; }
+    if (!info.open) info.showModal();
+  }
+  info.addEventListener('click', e => { if (e.target === info || e.target.closest('.modal-close')) info.close(); });
 
- const w=20+Math.random()*12;
- const h=7+Math.random()*6;
+  /* Fallback if the map cannot load: the locations as buttons, plus links that open the real map in a new tab */
+  function showFallback() {
+    expandBtn.hidden = true;
+    preview.className = 'map-fallback';
+    const msg = document.createElement('p'); msg.className = 'fallback-msg';
+    msg.textContent = translations[currentLanguage]['map.fallback'] || 'The interactive map could not load. Check your internet connection, or open the site with VS Code Live Server. The locations are listed below.';
+    const rows = NODES.map(n => {
+      const row = document.createElement('div'); row.className = 'fallback-row';
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'fallback-dot'; b.innerHTML = '<i></i>' + n.name;
+      b.addEventListener('click', () => showInfo(n));
+      const a = document.createElement('a');
+      a.href = 'https://www.openstreetmap.org/?mlat=' + n.lat + '&mlon=' + n.lng + '#map=12/' + n.lat + '/' + n.lng;
+      a.target = '_blank'; a.rel = 'noopener noreferrer'; a.textContent = translations[currentLanguage]['map.openLink'] || 'Open map ↗';
+      row.append(b, a); return row;
+    });
+    preview.replaceChildren(msg, ...rows);
+  }
+  if (!(await ensureLeaflet())) { showFallback(); return; }
 
- el.style.width=w+"px";
- el.style.height=h+"px";
+  try {
+  /* Key-free map tiles. Standard OpenStreetMap, filtered to light gray (see .tiles-paper in the CSS).
+     If OpenStreetMap refuses to load, Esri's free street tiles take over. Satellite is a switch on the full-page map. */
+  function addBase(map, withSwitcher) {
+    const street = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      { maxZoom: 19, className: 'tiles-paper', attribution: '&copy; OpenStreetMap contributors' });
+    const backup = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+      { maxZoom: 19, className: 'tiles-paper', attribution: 'Tiles &copy; Esri' });
+    const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      { maxZoom: 19, attribution: 'Tiles &copy; Esri' });
+    let loaded = false, swapped = false;
+    const note = document.createElement('div');
+    note.className = 'map-notice';
+    note.textContent = translations[currentLanguage]['map.tiles'] || 'The map tiles could not load. Check your internet connection and open the site through a local server (for example VS Code Live Server) instead of double-clicking the file.';
+    [street, backup, sat].forEach(l => l.on('tileload', () => { loaded = true; note.remove(); }));
+    street.addTo(map);
+    street.on('tileerror', () => {                       /* nothing loaded from OpenStreetMap: switch to the backup */
+      if (loaded || swapped) return; swapped = true;
+      map.removeLayer(street); backup.addTo(map);
+    });
+    if (withSwitcher) L.control.layers({ 'Map': street, 'Satellite': sat }, null, { position: 'topleft' }).addTo(map);
+    setTimeout(() => { if (!loaded) map.getContainer().append(note); }, 7000);
+  }
 
- el.style.left=(x ?? Math.random()*innerWidth)+"px";
- el.style.top=(y ?? Math.random()*innerHeight)+"px";
- el.style.transform=`rotate(${Math.random()*360}deg)`;
+  /* Red point markers */
+  const dotIcon = L.divIcon({ className: 'dot-icon', html: '<span class="dot"></span>', iconSize: [28, 28], iconAnchor: [14, 14] });
+  function addDots(map, onPick) {
+    NODES.forEach(n => {
+      L.marker([n.lat, n.lng], { icon: dotIcon, title: n.name })
+        .addTo(map)
+        .bindTooltip(n.name, { permanent: true, direction: 'top', offset: [0, -14] })
+        .on('click', () => onPick(n));
+    });
+  }
+  const bounds = NODES.map(n => [n.lat, n.lng]);
 
- document.body.appendChild(el);
- return el;
-}
+  /* Inline preview: fixed view, click anywhere to expand */
+  preview.replaceChildren();
+  const small = L.map('map', { zoomControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false,
+    touchZoom: false, boxZoom: false, keyboard: false });
+  addBase(small, false);
+  addDots(small, n => { openAtlas(); if (n.image) showInfo(n); });
+  small.fitBounds(bounds, { padding: [60, 60], maxZoom: 8 });
+  small.on('click', () => openAtlas());
+  window.nytMap = small;
+  expandBtn.addEventListener('click', () => openAtlas());
 
-/* ------------------ GLOBAL DRAG SYSTEM ------------------ */
+  /* Full-page map: drag, zoom, tap the dots */
+  let big = null;
+  function showAll() { big.fitBounds(bounds, { padding: [120, 120], maxZoom: 8 }); }
+  function pick(n) {
+    big.setView([n.lat, n.lng], Math.max(big.getZoom(), 10));
+    if (n.image) showInfo(n);
+  }
+  function openAtlas() {
+    mapDlg.showModal(); document.body.style.overflow = 'hidden';
+    if (!big) { big = L.map('mapBig', { minZoom: 3 }); addBase(big, true); addDots(big, pick); }
+    setTimeout(() => { big.invalidateSize(); showAll(); }, 60);
+  }
+  mapDlg.querySelector('.map-reset').addEventListener('click', () => { if (big) showAll(); });
+  mapDlg.querySelector('.map-close').addEventListener('click', () => mapDlg.close());
+  mapDlg.addEventListener('close', () => { document.body.style.overflow = ''; });
+  addEventListener('resize', () => { if (big) big.invalidateSize(); });
+  } catch (err) { console.error('Map setup failed:', err); showFallback(); }
+})();
 
-let active=null,ox=0,oy=0;
+/* ---------- Lightbox (Atlas, Tourism Art gallery, all performance cards) ---------- */
+(function () {
+  const dlg = document.getElementById('workDialog');
+  const grid = dlg.querySelector('.modal-grid'), media = dlg.querySelector('.modal-media'), img = media.querySelector(':scope > img');
+  const body = grid.querySelector('.modal-body');
+  const gal = media.querySelector('.gal'), thumbsBox = gal.querySelector('.gal-thumbs'), count = gal.querySelector('.gal-count');
+  const el = (tag, cls, html) => { const n = document.createElement(tag); if (cls) n.className = cls; if (html) n.innerHTML = html; return n; };
+  let slides = [], idx = 0, label = '';
 
-window.addEventListener("pointerdown",e=>{
- if(!e.target.classList.contains("rice")) return;
- active=e.target;
- active.dragging=true;
- ox=e.offsetX;
- oy=e.offsetY;
- title.classList.add("shake");
-});
+  function show(i) {
+    idx = (i + slides.length) % slides.length;
+    img.src = slides[idx]; img.alt = label + ' — image ' + (idx + 1) + ' of ' + slides.length;
+    count.textContent = (idx + 1) + ' / ' + slides.length;
+    [...thumbsBox.children].forEach((t, k) => { t.classList.toggle('on', k === idx); if (k === idx) t.scrollIntoView({ block: 'nearest', inline: 'nearest' }); });
+  }
 
-window.addEventListener("pointermove",e=>{
- if(!active) return;
- active.style.left=(e.clientX-ox)+"px";
- active.style.top=(e.clientY-oy)+"px";
-});
+  function open(card) {
+    const pic = card.querySelector('img');
+    const isProject = card.closest('.work-group').dataset.category === 'projects';
+    const slideList = card.dataset.gallery ? JSON.parse(card.dataset.gallery) : null;
+    label = card.dataset.galleryLabel || card.querySelector('h3').textContent.trim();
+    grid.classList.toggle('has-description', isProject);
+    body.hidden = !isProject;
+    if (isProject) {
+      const parts = [...card.querySelector('.work-body').children]
+        .filter(n => !n.matches('.open-hint,.work-year')).map(n => n.cloneNode(true));
+      const yearEl = card.querySelector('.work-year');
+      if (yearEl) {
+        const year = el('div', 'modal-year');
+        const yearLabel = document.createElement('span');
+        yearLabel.textContent = card.dataset.yearLabel || 'Year';
+        const yearValue = document.createElement('strong');
+        yearValue.textContent = card.dataset.year || yearEl.textContent;
+        year.append(yearLabel, yearValue);
+        let at = parts.findIndex(n => n.matches('h3')) + 1;
+        if (parts[at] && parts[at].matches('.work-meta')) at++;
+        parts.splice(at, 0, year);
+      }
+      body.replaceChildren(...parts);
+      body.scrollTop = 0;
+    } else {
+      body.replaceChildren();
+    }
+    dlg.classList.toggle('is-gallery', !!slideList);
+    media.classList.toggle('has-gallery', !!slideList);
+    gal.hidden = !slideList;
+    if (slideList) {
+      slides = slideList;
+      thumbsBox.replaceChildren(...slides.map((src, k) => {
+        const t = el('button', 'gal-thumb', '<img alt="" src="' + src + '">');
+        t.type = 'button'; t.setAttribute('aria-label', 'Show image ' + (k + 1)); t.addEventListener('click', () => show(k));
+        return t;
+      }));
+      show(0);
+    } else {
+      slides = [];
+      img.src = card.dataset.modalImg || pic.currentSrc || pic.src; img.alt = pic.alt;
+    }
+    dlg.setAttribute('aria-label', label);
 
-window.addEventListener("pointerup",()=>{
- if(!active) return;
- active.dragging=false;
- active=null;
- title.classList.remove("shake");
-});
+    dlg.showModal(); document.body.style.overflow = 'hidden';
+  }
+  document.querySelectorAll('.is-clickable').forEach(card => {
+    card.addEventListener('click', e => { if (!e.target.closest('a,button')) open(card); });
+    card.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && !e.target.closest('a,button')) { e.preventDefault(); open(card); } });
+  });
+  gal.querySelector('.prev').addEventListener('click', () => show(idx - 1));
+  gal.querySelector('.next').addEventListener('click', () => show(idx + 1));
+  dlg.addEventListener('keydown', e => {
+    if (!slides.length) return;
+    if (e.key === 'ArrowLeft') show(idx - 1); else if (e.key === 'ArrowRight') show(idx + 1);
+  });
+  dlg.addEventListener('click', e => { if (e.target === dlg || e.target.closest('.modal-close')) dlg.close(); });
+  dlg.addEventListener('close', () => { document.body.style.overflow = ''; });
+})();
 
-/* ------------------ STATIC RICE ------------------ */
+/* ---------- Floating, draggable rice grains ---------- */
+(function () {
+  const layer = document.querySelector('.rice-drift-layer');
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const grains = [];
+  let frame = 0, lastFrame = 0;
+  let audioContext = null, noiseBuffer = null, activeSound = null;
 
-for(let i=0;i<63;i++) makeRice("white");
-for(let i=0;i<63;i++) makeRice("black");
+  function viewport() {
+    return { width: document.documentElement.clientWidth, height: window.innerHeight };
+  }
 
-/* ------------------ AUTO RICE ------------------ */
+  function playRiceSound(loop) {
+    const AudioContextType = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextType) return null;
 
-const autoW=makeRice("white",-40,innerHeight*0.3);
-const autoB=makeRice("black",innerWidth+40,innerHeight*0.65);
+    if (!audioContext) {
+      audioContext = new AudioContextType();
+      const length = Math.floor(audioContext.sampleRate * .32);
+      noiseBuffer = audioContext.createBuffer(1, length, audioContext.sampleRate);
+      const samples = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < length; i++) {
+        const fade = Math.sin(Math.PI * i / (length - 1));
+        samples[i] = (Math.random() * 2 - 1) * fade;
+      }
+    }
 
-let wx=-40;
-let bx=innerWidth+40;
+    if (audioContext.state === 'suspended') {
+      audioContext.resume().catch(error => console.warn('Rice-grain audio could not start:', error));
+    }
+    if (activeSound) stopRiceSound(activeSound, .02);
 
-function animateAuto(){
+    const source = audioContext.createBufferSource();
+    const filter = audioContext.createBiquadFilter();
+    const volume = audioContext.createGain();
+    const now = audioContext.currentTime;
+    source.buffer = noiseBuffer;
+    source.loop = loop;
+    filter.type = 'lowpass';
+    filter.frequency.value = 1100;
+    filter.Q.value = .7;
+    volume.gain.setValueAtTime(.0001, now);
+    volume.gain.linearRampToValueAtTime(.035, now + .025);
+    source.connect(filter);
+    filter.connect(volume);
+    volume.connect(audioContext.destination);
 
- if(!autoW.dragging){
-   wx+=1.4;
-   if(wx>innerWidth+40) wx=-40;
-   autoW.style.left=wx+"px";
- }
+    const sound = { source, volume, stopped: false, ended: false };
+    activeSound = sound;
+    source.onended = () => {
+      sound.ended = true;
+      if (activeSound === sound) activeSound = null;
+      source.disconnect();
+      filter.disconnect();
+      volume.disconnect();
+    };
+    source.start(now);
+    if (loop) {
+      volume.gain.linearRampToValueAtTime(.025, now + .12);
+    } else {
+      volume.gain.setValueAtTime(.025, now + .1);
+      volume.gain.linearRampToValueAtTime(.0001, now + .28);
+      source.stop(now + .29);
+    }
+    return sound;
+  }
 
- if(!autoB.dragging){
-   bx-=1.4;
-   if(bx<-40) bx=innerWidth+40;
-   autoB.style.left=bx+"px";
- }
+  function stopRiceSound(sound, fade = .12) {
+    if (!sound || sound.stopped || sound.ended) return;
+    sound.stopped = true;
+    const now = audioContext.currentTime;
+    sound.volume.gain.cancelScheduledValues(now);
+    sound.volume.gain.setValueAtTime(Math.max(sound.volume.gain.value, .0001), now);
+    sound.volume.gain.linearRampToValueAtTime(.0001, now + fade);
+    sound.source.stop(now + fade + .01);
+    if (activeSound === sound) activeSound = null;
+  }
 
- requestAnimationFrame(animateAuto);
-}
-animateAuto();
+  function addGrain(element) {
+    const { width, height } = viewport();
+    const size = element.getBoundingClientRect();
+    const direction = element.classList.contains('white') ? -1 : 1;
+    const x = direction < 0 ? width * .82 : width * .18;
+    const y = height * (.3 + Math.random() * .5);
+    const grain = {
+      element, x, y, baseY: y, direction, speed: 12 + Math.random() * 5,
+      phase: Math.random() * Math.PI * 2, angle: (Math.random() - .5) * 28,
+      size: size.width, dragging: false
+    };
+    grains.push(grain);
+    position(grain);
+    return grain;
+  }
 
-/* ------------------ AUDIO DRONE ------------------ */
+  function position(grain) {
+    grain.element.style.left = grain.x + 'px';
+    grain.element.style.top = grain.y + 'px';
+    grain.element.style.transform = 'translate(-50%,-50%) rotate(' +
+      (grain.angle + Math.sin(grain.phase) * 4) + 'deg)';
+  }
 
-let audioStarted=false;
+  function bindDrag(grain) {
+    const el = grain.element;
+    el.addEventListener('click', event => {
+      if (event.detail === 0) playRiceSound(false);
+    });
+    el.addEventListener('pointerdown', event => {
+      event.preventDefault();
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
+      grain.dragging = true;
+      grain.startX = event.clientX;
+      grain.startY = event.clientY;
+      grain.moved = false;
+      grain.sound = playRiceSound(false);
+      el.classList.add('is-dragging');
+      grain.x = event.clientX;
+      grain.y = event.clientY;
+      grain.baseY = grain.y;
+      el.setPointerCapture(event.pointerId);
+      position(grain);
+    });
+    el.addEventListener('pointermove', event => {
+      if (!grain.dragging) return;
+      if (!grain.moved && Math.hypot(event.clientX - grain.startX, event.clientY - grain.startY) >= 5) {
+        grain.moved = true;
+        grain.sound = playRiceSound(true);
+      }
+      grain.x = event.clientX;
+      grain.y = event.clientY;
+      grain.baseY = grain.y;
+      position(grain);
+    });
+    const release = () => {
+      grain.dragging = false;
+      grain.baseY = grain.y;
+      if (grain.moved) stopRiceSound(grain.sound);
+      grain.sound = null;
+      el.classList.remove('is-dragging');
+    };
+    el.addEventListener('pointerup', release);
+    el.addEventListener('pointercancel', release);
+    el.addEventListener('keydown', event => {
+      const step = event.shiftKey ? 30 : 10;
+      const moves = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
+      if (!moves[event.key]) return;
+      event.preventDefault();
+      grain.x += moves[event.key][0];
+      grain.y += moves[event.key][1];
+      grain.baseY = grain.y;
+      position(grain);
+    });
+  }
 
-function startHum(){
- if(audioStarted) return;
- audioStarted=true;
+  function animate(now) {
+    frame = 0;
+    if (document.hidden || reducedMotion) return;
+    const elapsed = Math.min(now - (lastFrame || now), 50);
+    lastFrame = now;
+    const { width } = viewport();
 
- const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    for (const grain of grains) {
+      if (grain.dragging) continue;
+      grain.phase += elapsed * .00065;
+      grain.x += grain.direction * grain.speed * elapsed / 1000;
+      grain.y = grain.baseY + Math.sin(grain.phase) * 18;
 
- const osc1=ctx.createOscillator();
- const osc2=ctx.createOscillator();
- const gain=ctx.createGain();
- const filter=ctx.createBiquadFilter();
+      const size = grain.size || 48;
+      if (grain.direction < 0 && grain.x < -size) grain.x = width + size;
+      if (grain.direction > 0 && grain.x > width + size) grain.x = -size;
+      position(grain);
+    }
 
- osc1.type="sawtooth";
- osc2.type="sine";
+    frame = requestAnimationFrame(animate);
+  }
 
- osc1.frequency.value=55;
- osc2.frequency.value=63;
+  function startAnimation() {
+    if (!reducedMotion && !document.hidden && !frame) frame = requestAnimationFrame(animate);
+  }
 
- filter.type="lowpass";
- filter.frequency.value=180;
+  layer.querySelectorAll('.rice-grain').forEach(element => {
+    const grain = addGrain(element);
+    bindDrag(grain);
+  });
 
- gain.gain.value=0.18;
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      if (frame) cancelAnimationFrame(frame);
+      frame = 0;
+      lastFrame = 0;
+    } else {
+      startAnimation();
+    }
+  });
+  addEventListener('resize', () => {
+    const { width, height } = viewport();
+    grains.forEach(grain => {
+      grain.x = Math.max(-grain.size, Math.min(width + grain.size, grain.x));
+      grain.y = Math.max(0, Math.min(height, grain.y));
+      grain.baseY = grain.y;
+      position(grain);
+    });
+  });
+  startAnimation();
+})();
 
- osc1.connect(filter);
- osc2.connect(filter);
- filter.connect(gain);
- gain.connect(ctx.destination);
-
- osc1.start();
- osc2.start();
-
- // élő lebegés
- setInterval(()=>{
-   osc2.frequency.value=60+Math.random()*8;
- },900);
-}
-
-/* ------------------ CLICK TRIGGER ------------------ */
-
-window.addEventListener("click",()=>{
- revealFragment();
- startHum();
-});
+document.getElementById('year').textContent = new Date().getFullYear();
 </script>
-
+<script async src="https://www.instagram.com/embed.js"></script>
 </body>
 </html>
-
-
